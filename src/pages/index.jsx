@@ -1,111 +1,104 @@
 import React, { useState } from 'react';
+import { useSessionStream } from '../hooks/useSessionStream';
+import LiveTower from '../components/timing-tower/LiveTower';
+import WheelDisplay from '../components/telemetry/WheelDisplay';
+import LiveTrackMap from '../components/telemetry/LiveTrackMap'; // <-- IMPORT THE MAP
 
 export default function DashboardIndex() {
-  // Simple simulator state for testing dynamic team changes
-  const [activeTeam, setActiveTeam] = useState('theme-ferrari');
+  // Pull real-time structured telemetry stream data directly from Python BFF
+  const { drivers, isLoading, error } = useSessionStream();
+  const [selectedDriver, setSelectedDriver] = useState('LEC');
 
-  const handleTeamChange = (themeClass) => {
-    // Update the body class directly to transition CSS custom properties seamlessly
-    document.body.className = `${themeClass} antialiased bg-carbon-800 text-gray-100 font-mono`;
-    setActiveTeam(themeClass);
-  };
+  // Find the telemetry profile of whichever driver the user clicks in the tower
+  const activeDriverData = drivers.find(d => d.code === selectedDriver);
+  const activeTelemetry = activeDriverData ? {
+    speed: activeDriverData.speed,
+    rpm: activeDriverData.rpm,
+    gear: activeDriverData.gear
+  } : null;
+
+  // Format driver items for the timing tower component safely
+  const formattedTowerDrivers = drivers.map((drv, idx) => ({
+    code: drv.code,
+    position: drv.position || idx + 1,
+    gap: drv.brake > 0 ? "BRAKING" : `${drv.speed} KM/H`,
+    teamColor: drv.code === 'LEC' ? '#E80020' : drv.code === 'VER' ? '#3671C6' : drv.code === 'NOR' ? '#FF8000' : '#27F4D2'
+  }));
 
   return (
-    <div className="min-h-screen flex flex-col bg-carbon-900 text-gray-100">
+    <div className="min-h-screen flex flex-col bg-carbon-900 text-gray-100 font-mono">
       
-      {/* HEADER / SESSION RIBBON */}
-      <header className="border-b border-carbon-600 bg-carbon-800 px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <span className="h-3 w-3 rounded-full bg-neon-green animate-pulse" />
-          <h1 className="text-lg font-bold tracking-wider uppercase">
-            Live Telemetry Control Room
-          </h1>
-        </div>
-        
-        {/* Prototype Theme Toggles (Simulating dynamic grid customization) */}
-        <div className="flex items-center space-x-2 text-xs">
-          <span className="text-gray-400">Active Identity:</span>
-          <button 
-            onClick={() => handleTeamChange('theme-ferrari')}
-            className={`px-3 py-1 border transition-all ${activeTeam === 'theme-ferrari' ? 'border-neon-red bg-neon-red/10 text-white' : 'border-carbon-600 text-gray-400 hover:text-white'}`}
-          >
-            SF-24
-          </button>
-          <button 
-            onClick={() => handleTeamChange('theme-mercedes')}
-            className={`px-3 py-1 border transition-all ${activeTeam === 'theme-mercedes' ? 'border-team-primary bg-team-primary/10 text-white' : 'border-carbon-600 text-gray-400 hover:text-white'}`}
-          >
-            W15
-          </button>
-          <button 
-            onClick={() => handleTeamChange('theme-mclaren')}
-            className={`px-3 py-1 border transition-all ${activeTeam === 'theme-mclaren' ? 'border-team-primary bg-team-primary/10 text-white' : 'border-carbon-600 text-gray-400 hover:text-white'}`}
-          >
-            MCL38
-          </button>
-        </div>
+      {/* GLOBAL HEADER HEADER */}
+      <header className="border-b border-carbon-600 bg-carbon-800 px-6 py-4 flex justify-between items-center">
+        <h1 className="text-md font-bold tracking-wider uppercase flex items-center gap-2">
+          <span className={`w-2 h-2 rounded-full ${isLoading ? 'bg-neon-yellow animate-pulse' : 'bg-neon-green'}`}/>
+          Grand Stand Matrix // Unified Full-Stack Telemetry
+        </h1>
+        <span className="text-xs bg-carbon-700 border border-carbon-600 px-3 py-1 rounded text-gray-400">
+          BFF Pipeline: <span className="text-neon-green font-bold">ONLINE (127.0.0.1:8000)</span>
+        </span>
       </header>
 
-      {/* MAIN LAYOUT WRAPPER */}
-      <div className="flex-1 grid grid-cols-1 xl:grid-cols-4 p-4 gap-4">
+      {/* CORE CONTROL ROOM WORKING GRID */}
+      <div className="flex-1 grid grid-cols-1 xl:grid-cols-4 p-4 gap-4 overflow-hidden">
         
-        {/* TIMING TOWER / SYSTEM RADAR SLOT */}
-        <aside className="xl:col-span-1 bg-carbon-700 border border-carbon-600 rounded p-4 flex flex-col space-y-4">
-          <div className="border-b border-carbon-600 pb-2">
-            <h2 className="text-sm font-bold text-gray-400 tracking-widest uppercase">
-               Timing Tower
-            </h2>
-          </div>
-          <div className="flex-1 flex items-center justify-center border border-dashed border-carbon-600 rounded bg-carbon-800/50 p-6 text-center text-xs text-gray-500">
-            Placeholder: components/timing-tower/LiveTower.jsx
-          </div>
+        {/* SIDE PANEL: MULTI-CAR TIMING TOWER */}
+        <aside className="xl:col-span-1 bg-carbon-700 border border-carbon-600 rounded p-4 flex flex-col h-[350px] xl:h-auto">
+          <LiveTower 
+            drivers={formattedTowerDrivers} 
+            selectedDriver={selectedDriver} 
+            onSelectDriver={setSelectedDriver} 
+          />
         </aside>
 
-        {/* MODULAR TELEMETRY BLOCKS */}
+        {/* CENTRAL GRAPHICS GRID COCKPIT */}
         <main className="xl:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-4">
           
-          {/* Real-time Telemetry Graph Slot */}
-          <section className="bg-carbon-700 border border-carbon-600 rounded p-4 flex flex-col h-[300px] md:h-auto shadow-neon-glow">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-sm font-bold tracking-wide uppercase flex items-center gap-2">
-                <span className="w-2 h-2 bg-team-primary inline-block rounded-sm"></span>
-                Throttle & Brake Input
-              </h3>
-              <span className="text-[10px] bg-carbon-600 text-neon-red px-2 py-0.5 rounded font-bold">LIVE</span>
-            </div>
-            <div className="flex-1 flex items-center justify-center border border-dashed border-carbon-600 rounded bg-carbon-800/50 text-xs text-gray-500">
-              Placeholder: components/telemetry/TelemetryChart.jsx
-            </div>
+          {/* DIAL TELEMETRY INTERFACE CARD */}
+          <section className="bg-carbon-700 border border-carbon-600 rounded p-4 flex flex-col">
+            <h3 className="text-xs font-bold text-gray-400 mb-3 uppercase tracking-wider">
+              {/* Telemetry Node Focus:  */}
+              {selectedDriver}
+            </h3>
+            <WheelDisplay telemetry={activeTelemetry} />
+            
+            {/* Live Input Meter bars overlay */}
+            {activeDriverData && (
+              <div className="mt-4 space-y-2 bg-carbon-900 border border-carbon-600 p-3 rounded text-[11px]">
+                <div>
+                  <div className="flex justify-between mb-0.5">
+                    <span className="text-neon-green font-bold">THROTTLE</span>
+                    <span>{activeDriverData.throttle}%</span>
+                  </div>
+                  <div className="w-full bg-carbon-600 h-1.5 rounded-sm overflow-hidden">
+                    <div className="bg-neon-green h-full transition-all duration-150" style={{ width: `${activeDriverData.throttle}%` }} />
+                  </div>
+                </div>
+                <div>
+                  <div className="flex justify-between mb-0.5">
+                    <span className="text-neon-red font-bold">BRAKE</span>
+                    <span>{activeDriverData.brake}%</span>
+                  </div>
+                  <div className="w-full bg-carbon-600 h-1.5 rounded-sm overflow-hidden">
+                    <div className="bg-neon-red h-full transition-all duration-150" style={{ width: `${activeDriverData.brake}%` }} />
+                  </div>
+                </div>
+              </div>
+            )}
           </section>
 
-          {/* Canvas Engine G-Force/RPM Matrix Slot */}
-          <section className="bg-carbon-700 border border-carbon-600 rounded p-4 flex flex-col h-[300px] md:h-auto">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-sm font-bold tracking-wide uppercase flex items-center gap-2">
-                <span className="w-2 h-2 bg-neon-purple inline-block rounded-sm"></span>
-                G-Force / Sector Diagnostics
-              </h3>
-              <span className="text-[10px] bg-carbon-600 text-neon-purple px-2 py-0.5 rounded font-bold">240 Hz</span>
-            </div>
-            <div className="flex-1 flex items-center justify-center border border-dashed border-carbon-600 rounded bg-carbon-800/50 text-xs text-gray-500">
-              Placeholder: components/telemetry/GForceCanvas.jsx
+          {/* REAL VECTOR CIRCUIT MAP INSIGHT LAYER */}
+          <section className="bg-carbon-700 border border-carbon-600 rounded p-4 flex flex-col justify-between">
+            <h3 className="text-xs font-bold text-gray-400 mb-2 uppercase tracking-wider">
+              
+            </h3>
+            <div className="flex-1 min-h-[300px]">
+              {/* WE REPLACE THE RECTANGLE WITH OUR COMPONENT LINK NODE */}
+              <LiveTrackMap drivers={drivers} />
             </div>
           </section>
-
-          {/* Global Race Metadata / Alerts Console */}
-          <section className="md:col-span-2 bg-carbon-700 border border-carbon-600 rounded p-4 flex flex-col h-40">
-            <div className="mb-2">
-              <h3 className="text-sm font-bold text-neon-yellow tracking-wide uppercase">
-                ▲ Race Control Notifications
-              </h3>
-            </div>
-            <div className="flex-1 overflow-y-auto font-mono text-xs text-gray-400 space-y-1 p-2 bg-carbon-900 border border-carbon-600 rounded">
-              <p><span className="text-neon-yellow">[14:02:11]</span> SAFETY CAR DEPLOYED — SECTOR 2</p>
-              <p><span className="text-gray-500">[14:02:45]</span> Telemetry Stream Sync: API Latency 14ms</p>
-            </div>
-          </section>
-
         </main>
+
       </div>
     </div>
   );
