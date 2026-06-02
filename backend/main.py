@@ -1,99 +1,148 @@
+import time
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import fastf1
 import pandas as pd
 import numpy as np
 
-# Force FastF1 to initialize its local data structures securely
+# Enable caching to protect disk and network bandwidth
 fastf1.Cache.enable_cache('fastf1_cache') 
 
-app = FastAPI(title="F1 Telemetry Core BFF Engine")
+app = FastAPI(title="F1 Telemetry Production Engine")
 
-# STAGE 1: Explicitly handle cross-origin routing configurations
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Ensures localhost:3000 can ingest the raw data streams cleanly
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Robust fallback fallback shape matrix representing a real grand prix loop footprint
-# This ensures that if FastF1 returns empty arrays while downloading, your UI still loads instantly
+# Global variables to hold our pre-loaded telemetry data structures
+LAZY_SESSION_STORAGE = {
+    "session": None,
+    "driver_telemetries": {},
+    "max_frames": 0,
+    "loaded_lap": -1
+}
+
+SESSION_PLAYBACK_COUNTER = {"current_frame": 0}
+
 FALLBACK_SPA_GRID = [
     {"x": 0, "y": -100}, {"x": 50, "y": -80}, {"x": 80, "y": -40}, 
     {"x": 100, "y": 0}, {"x": 70, "y": 50}, {"x": 20, "y": 90}, 
     {"x": -40, "y": 100}, {"x": -90, "y": 60}, {"x": -60, "y": -30}
 ]
 
+def pre_load_lap_telemetry(year, search_location, session_type, lap):
+    """Loads telemetry data into memory ONCE to keep resource usage extremely low."""
+    print(f"[SYSTEM] Pre-loading data for Lap {lap}... Please wait.")
+    
+    session = fastf1.get_session(year, search_location, session_type)
+    session.load(telemetry=True, laps=True, weather=False)
+    
+    driver_mapping = {
+        # 'VER': '1', 
+        # 'NOR': '4',
+        'HAM': '44', 'RUS': '63', 
+        # 'LEC': '16', 'SAI': '55', 'PIA': '81', 'PER': '11'
+    }
+    
+    telemetries = {}
+    max_frames = 9999
+    
+    for code, num in driver_mapping.items():
+        try:
+            drv_laps = session.laps.pick_drivers(num)
+            target_lap_data = drv_laps[drv_laps['LapNumber'] == lap]
+            if not target_lap_data.empty:
+                car_data = target_lap_data.get_car_data()
+                if not car_data.empty:
+                    telemetries[code] = car_data
+                    if len(car_data) < max_frames:
+                        max_frames = len(car_data)
+        except Exception:
+            continue
+
+    LAZY_SESSION_STORAGE["session"] = session
+    LAZY_SESSION_STORAGE["driver_telemetries"] = telemetries
+    LAZY_SESSION_STORAGE["max_frames"] = max_frames if telemetries else 0
+    LAZY_SESSION_STORAGE["loaded_lap"] = lap
+    print(f"[SYSTEM] Lap {lap} loaded successfully. Engine is running efficiently.")
+
 @app.get("/api/circuit")
-def get_circuit_layout(year: int = 2024, location: str = "Spa", session_type: str = "R"):
-    """
-    Fetches raw tracking coordinates, downsamples the node densities, 
-    and returns balanced SVG tracking objects safely.
-    """
+def get_circuit_layout(location: str = "Spa"):
+    # Reuses the pre-loaded data in memory instantly
     try:
-        print(f"[BFF Engine] Processing session request: {year} {location} [{session_type}]...")
-        
-        # Load the target archival slice
-        session = fastf1.get_session(year, location, session_type)
-        session.load(telemetry=True, laps=True, weather=False)
-        
-        # Pull the absolute fastest reference lap from the database
+        if LAZY_SESSION_STORAGE["session"] is None:
+            search_location = "Belgium" if location.lower() == "spa" else location
+            session = fastf1.get_session(2024, search_location, "R")
+            session.load(telemetry=True, laps=True, weather=False)
+            LAZY_SESSION_STORAGE["session"] = session
+            
+        session = LAZY_SESSION_STORAGE["session"]
         fastest_lap = session.laps.pick_fastest()
         pos_data = fastest_lap.get_pos_data()
         
-        # Check if the asset is still downloading or currently unpopulated
         if pos_data is None or pos_data.empty:
-            print("[WARN] FastF1 telemetry arrays loading/empty. Pushing high-fidelity loop fallback.")
-            return {
-                "track_name": f"{location} Circuit (Simulation Mode)",
-                "country": "Live Feed",
-                "total_points": len(FALLBACK_SPA_GRID),
-                "points": FALLBACK_SPA_GRID
-            }
+            return {"points": FALLBACK_SPA_GRID}
             
-        # Downsample the raw data streams to protect Next.js frame budgets
         x_coords = pos_data['X'].values[::6]
         y_coords = pos_data['Y'].values[::6]
-        
-        # Center coordinates around origin (0,0) so the SVG fits automatically inside its bounding container
         x_centered = x_coords - np.mean(x_coords)
         y_centered = y_coords - np.mean(y_coords)
         
         circuit_points = [
-            {"x": float(x) * 0.1, "y": float(y) * 0.1} # Scale factor reduction for cleaner SVG layout logic
+            {"x": float(x) * 0.05, "y": float(y) * 0.05} 
             for x, y in zip(x_centered, y_centered)
         ]
-        
-        print(f"[SUCCESS] Dispatched {len(circuit_points)} track coordinate vectors down to frontend.")
-        return {
-            "track_name": session.event['EventName'],
-            "country": session.event['Country'],
-            "total_points": len(circuit_points),
-            "points": circuit_points
-        }
-        
-    except Exception as e:
-        print(f"[CRITICAL ERROR] BFF pipeline halted: {str(e)}")
-        # Graceful fallback protection block instead of hard throwing 500 crashes
-        return {
-            "track_name": f"{location} (Failover Mode)",
-            "country": "System Active",
-            "total_points": len(FALLBACK_SPA_GRID),
-            "points": FALLBACK_SPA_GRID
-        }
+        return {"track_name": session.event['EventName'], "points": circuit_points}
+    except Exception:
+        return {"points": FALLBACK_SPA_GRID}
 
 @app.get("/api/session/live")
-def get_live_driver_matrix():
-    # Keep baseline data ticking over to run structural analytics
-    mock_matrix = [
-        {"code": "VER", "position": 1, "speed": 312, "rpm": 11800, "gear": 7, "throttle": 100, "brake": 0},
-        {"code": "NOR", "position": 2, "speed": 308, "rpm": 11650, "gear": 7, "throttle": 100, "brake": 0},
-        {"code": "LEC", "position": 3, "speed": 322, "rpm": 12100, "gear": 8, "throttle": 85,  "brake": 0},
-        {"code": "HAM", "position": 4, "speed": 245, "rpm": 9200,  "gear": 5, "throttle": 0,   "brake": 100}
-    ]
-    return {"drivers": mock_matrix}
+def get_live_driver_matrix(lap: int = 5):
+    try:
+        # If we haven't loaded this lap yet, load it once. 
+        # Otherwise, skip loading entirely and read straight from RAM!
+        if LAZY_SESSION_STORAGE["loaded_lap"] != lap:
+            pre_load_lap_telemetry(2024, "Belgium", "R", lap)
+            
+        telemetries = LAZY_SESSION_STORAGE["driver_telemetries"]
+        max_frames = LAZY_SESSION_STORAGE["max_frames"]
+        
+        if not telemetries or max_frames == 0:
+            return {"drivers": []}
+            
+        frame_index = SESSION_PLAYBACK_COUNTER["current_frame"]
+        SESSION_PLAYBACK_COUNTER["current_frame"] = (frame_index + 1) % max_frames
+        
+        live_matrix = []
+        for idx, (code, car_data) in enumerate(telemetries.items()):
+            try:
+                current_frame = car_data.iloc[frame_index]
+                raw_brake = current_frame.get('Brake', 0)
+                
+                live_matrix.append({
+                    "code": code,
+                    "position": int(idx + 1),
+                    "speed": int(current_frame.get('Speed', 0)),
+                    "rpm": int(current_frame.get('RPM', 0)),
+                    "gear": int(current_frame.get('Gear', 0)),
+                    "throttle": int(current_frame.get('Throttle', 0)),
+                    "brake": 100 if raw_brake is True or raw_brake > 0 else 0,
+                    "x": frame_index 
+                })
+            except Exception:
+                continue
+                
+        return {
+            "current_lap": lap,
+            "playback_frame": frame_index,
+            "drivers": sorted(live_matrix, key=lambda x: x['position'])
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     import uvicorn

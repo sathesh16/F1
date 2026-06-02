@@ -22,7 +22,7 @@ export default function LiveTrackMap({ drivers }) {
 
   return (
     <div className="relative w-full h-full bg-carbon-900 rounded border border-carbon-600 p-6 flex flex-col items-center justify-center min-h-[340px]">
-      
+
       {/* Dynamic Header Badge readouts */}
       <div className="absolute top-3 left-3 flex flex-col">
         <span className="text-[11px] font-bold text-white uppercase tracking-wider">
@@ -33,15 +33,15 @@ export default function LiveTrackMap({ drivers }) {
         </span>
       </div>
 
-      <svg 
-        viewBox={viewBox} 
+      <svg
+        viewBox={viewBox}
         className="w-full h-auto max-h-[260px] drop-shadow-[0_0_15px_rgba(0,210,106,0.05)]"
       >
         {/* Core Asphalt Vector Underlay Line */}
         <path
           d={svgLineData}
           fill="none"
-          stroke="#1F1F23" 
+          stroke="#1F1F23"
           strokeWidth="35"
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -50,42 +50,50 @@ export default function LiveTrackMap({ drivers }) {
         <path
           d={svgLineData}
           fill="none"
-          stroke="#3F3F46" 
+          stroke="#3F3F46"
           strokeWidth="6"
           strokeLinecap="round"
           strokeLinejoin="round"
         />
 
         {/* DRIVER TRANSPONDER DOT INDICATORS */}
-        {Object.values(drivers).map((driver, index) => {
-          // Calculate driver's tracking offset safely against the track array size
-          const nodeIndex = (index * 15 + Math.floor(Math.random() * 5)) % circuitPath.length;
+        {Object.values(drivers).map((driver) => {
+
+          // CRITICAL FIX: Base the index node completely on the sequential timeline index 'driver.x'
+          // and loop it smoothly if it exceeds the circuit path length.
+          // No random math, no arbitrary shifts.
+          const nodeIndex = Number(driver.x) % circuitPath.length;
           const node = circuitPath[nodeIndex];
 
+          // Shield rendering engine if coordinate points are momentarily undefined
           if (!node) return null;
 
           let teamColor = '#00D26A';
           if (driver.code === 'LEC') teamColor = '#E80020'; // Ferrari Red
-          if (driver.code === 'VER') teamColor = '#3671C6'; 
-          if (driver.code === 'NOR') teamColor = '#FF8000';
-          if (driver.code === 'HAM') teamColor = '#27F4D2';
+          if (driver.code === 'VER') teamColor = '#3671C6'; // Red Bull Blue
+          if (driver.code === 'NOR') teamColor = '#FF8000'; // McLaren Orange
+          if (driver.code === 'HAM') teamColor = '#27F4D2'; // Mercedes Teal
 
           return (
             <motion.g
               key={driver.code}
+              // Re-architect frames to use sleek linear transitions to match true car velocities
               animate={{ x: node.x, y: node.y }}
-              transition={{ type: "spring", stiffness: 70, damping: 12 }}
+              transition={{ type: "tween", ease: "linear", duration: 0.5 }}
             >
-              <circle r="16" fill={teamColor} opacity="0.3" className="animate-ping" />
-              <circle r="10" fill={teamColor} stroke="#FFFFFF" strokeWidth="2" />
+              {/* Visual Indicator Layer Rings */}
+              <circle r="14" fill={teamColor} opacity="0.25" />
+              <circle r="8" fill={teamColor} stroke="#FFFFFF" strokeWidth="2" />
+
+              {/* High contrast text badge elements */}
               <text
-                y="-15"
+                y="-14"
                 fill="#FFFFFF"
-                fontSize="12"
-                fontWeight="black"
-                fontFamily="sans-serif"
+                fontSize="11"
+                fontWeight="bold"
+                fontFamily="monospace"
                 textAnchor="middle"
-                className="bg-carbon-900 px-1 rounded font-bold"
+                className="bg-carbon-900"
               >
                 {driver.code}
               </text>

@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 
 export function useSessionStream() {
   const [drivers, setDrivers] = useState([]);
+  const [lap, setLap] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -15,6 +16,7 @@ export function useSessionStream() {
         const data = await res.json();
         
         if (isMounted && data.drivers) {
+          setLap(data.current_lap)
           setDrivers(data.drivers);
           setIsLoading(false);
         }
@@ -28,7 +30,7 @@ export function useSessionStream() {
     fetchLiveFeed();
 
     // Poll the Python BFF server every 500ms for fresh telemetry telemetry numbers
-    const interval = setInterval(fetchLiveFeed, 500);
+    const interval = setInterval(fetchLiveFeed, 300);
 
     return () => {
       isMounted = false;
@@ -36,5 +38,5 @@ export function useSessionStream() {
     };
   }, []);
 
-  return { drivers, isLoading, error };
+  return { lap, drivers, isLoading, error };
 }

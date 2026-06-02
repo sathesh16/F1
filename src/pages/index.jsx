@@ -6,7 +6,7 @@ import LiveTrackMap from '../components/telemetry/LiveTrackMap'; // <-- IMPORT T
 
 export default function DashboardIndex() {
   // Pull real-time structured telemetry stream data directly from Python BFF
-  const { drivers, isLoading, error } = useSessionStream();
+  const { lap, drivers, isLoading, error } = useSessionStream();
   const [selectedDriver, setSelectedDriver] = useState('LEC');
 
   // Find the telemetry profile of whichever driver the user clicks in the tower
@@ -45,6 +45,7 @@ export default function DashboardIndex() {
         {/* SIDE PANEL: MULTI-CAR TIMING TOWER */}
         <aside className="xl:col-span-1 bg-carbon-700 border border-carbon-600 rounded p-4 flex flex-col h-[350px] xl:h-auto">
           <LiveTower 
+            lap={lap}
             drivers={formattedTowerDrivers} 
             selectedDriver={selectedDriver} 
             onSelectDriver={setSelectedDriver} 
