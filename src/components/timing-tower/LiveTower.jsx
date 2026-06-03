@@ -1,11 +1,11 @@
 import React from 'react';
 
-export default function LiveTower({ lap, drivers, onSelectDriver, selectedDriver }) {
+export default function LiveTower({ lap, totalLaps, drivers, onSelectDriver, selectedDriver }) {
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       <div className="border-b border-carbon-600 pb-2 mb-3">
         <h2 className="text-xs font-bold text-gray-400 tracking-widest uppercase">Position</h2>
-        <p className="text-xs font-bold text-gray-400 tracking-widest uppercase">Lap: {lap}</p>
+        <p className="text-xs font-bold text-gray-400 tracking-widest uppercase">Lap: {lap} / {totalLaps}</p>
       </div>
       <div className="flex-1 overflow-y-auto space-y-1 pr-1">
         {drivers.map((driver) => {
