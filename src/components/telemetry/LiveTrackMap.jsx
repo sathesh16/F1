@@ -57,46 +57,42 @@ export default function LiveTrackMap({ drivers }) {
         />
 
         {/* DRIVER TRANSPONDER DOT INDICATORS */}
-        {Object.values(drivers).map((driver) => {
+        {drivers.map((driver) => {
 
-          // CRITICAL FIX: Base the index node completely on the sequential timeline index 'driver.x'
-          // and loop it smoothly if it exceeds the circuit path length.
-          // No random math, no arbitrary shifts.
-          const nodeIndex = Number(driver.x) % circuitPath.length;
-          const node = circuitPath[nodeIndex];
-
-          // Shield rendering engine if coordinate points are momentarily undefined
-          if (!node) return null;
-
-          let teamColor = '#00D26A';
-          if (driver.code === 'LEC') teamColor = '#E80020'; // Ferrari Red
-          if (driver.code === 'VER') teamColor = '#3671C6'; // Red Bull Blue
-          if (driver.code === 'NOR') teamColor = '#FF8000'; // McLaren Orange
-          if (driver.code === 'HAM') teamColor = '#27F4D2'; // Mercedes Teal
+          if (
+            driver.x === null ||
+            driver.y === null
+          ) {
+            return null;
+          }
 
           return (
             <motion.g
               key={driver.code}
-              // Re-architect frames to use sleek linear transitions to match true car velocities
-              animate={{ x: node.x, y: node.y }}
-              transition={{ type: "tween", ease: "linear", duration: 0.5 }}
+              animate={{
+                x: driver.x,
+                y: driver.y,
+              }}
+              transition={{
+                type: "tween",
+                ease: "linear",
+                duration: 0.25,
+              }}
             >
-              {/* Visual Indicator Layer Rings */}
-              <circle r="14" fill={teamColor} opacity="0.25" />
-              <circle r="8" fill={teamColor} stroke="#FFFFFF" strokeWidth="2" />
+              <circle
+                r="10"
+                fill={driver.teamColor}
+              />
 
-              {/* High contrast text badge elements */}
               <text
                 y="-14"
-                fill="#FFFFFF"
-                fontSize="11"
-                fontWeight="bold"
-                fontFamily="monospace"
+                fill="white"
+                fontSize="10"
                 textAnchor="middle"
-                className="bg-carbon-900"
               >
                 {driver.code}
               </text>
+
             </motion.g>
           );
         })}

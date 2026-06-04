@@ -1,34 +1,68 @@
-import React from 'react';
+import React from "react";
 
-export default function LiveTower({ lap, totalLaps, drivers, onSelectDriver, selectedDriver }) {
+export default function LiveTower({
+  lap,
+  totalLaps,
+  drivers,
+  selectedDriver,
+  onSelectDriver,
+}) {
   return (
-    <div className="flex-1 flex flex-col overflow-hidden">
-      <div className="border-b border-carbon-600 pb-2 mb-3">
-        <h2 className="text-xs font-bold text-gray-400 tracking-widest uppercase">Position</h2>
-        <p className="text-xs font-bold text-gray-400 tracking-widest uppercase">Lap: {lap} / {totalLaps}</p>
+    <div className="flex flex-col h-full">
+
+      <div className="mb-4">
+        <div className="text-xs text-gray-400 uppercase">
+          Timing Tower
+        </div>
+
+        <div className="text-sm font-bold text-white">
+          Lap {lap} / {totalLaps}
+        </div>
       </div>
-      <div className="flex-1 overflow-y-auto space-y-1 pr-1">
-        {drivers.map((driver) => {
-          const isSelected = selectedDriver === driver.code;
+
+      <div className="space-y-1 overflow-y-auto">
+
+        {drivers.map(driver => {
+
+          const active =
+            selectedDriver === driver.code;
+
           return (
             <button
               key={driver.code}
-              onClick={() => onSelectDriver(driver.code)}
-              className={`w-full flex items-center justify-between p-2 text-left rounded text-xs border transition-all ${
-                isSelected 
-                  ? 'border-team-primary bg-team-primary/10' 
-                  : 'border-carbon-600 bg-carbon-900/50 hover:border-gray-500'
+              onClick={() =>
+                onSelectDriver(driver.code)
+              }
+              className={`w-full flex items-center justify-between p-2 border text-xs ${
+                active
+                  ? "border-white"
+                  : "border-carbon-600"
               }`}
             >
-              <div className="flex items-center space-x-2">
-                <span className="w-4 text-gray-500 text-right font-bold">{driver.position}</span>
-                <span 
-                  className="w-1 h-3 rounded-sm" 
-                  style={{ backgroundColor: driver.teamColor }}
+              <div className="flex items-center gap-2">
+
+                <span className="w-5">
+                  P{driver.position}
+                </span>
+
+                <span
+                  className="w-2 h-4"
+                  style={{
+                    backgroundColor:
+                      driver.teamColor,
+                  }}
                 />
-                <span className="font-bold text-white uppercase">{driver.code}</span>
+
+                <span>
+                  {driver.code}
+                </span>
+
               </div>
-              <span className="font-mono text-gray-400">{driver.gap}</span>
+
+              <span>
+                {driver.speed} km/h
+              </span>
+
             </button>
           );
         })}

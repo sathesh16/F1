@@ -1,62 +1,65 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";
+
+const API_URL = "http://127.0.0.1:8000";
 
 export function useSessionStream() {
+  const [session, setSession] = useState(null);
+  const [race, setRace] = useState(null);
   const [drivers, setDrivers] = useState([]);
-  const [lap, setLap] = useState(0);
-  const [totalLaps, setTotalLaps] = useState(0); // Added to track total laps from backend
+
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
   async function fetchLiveFeed() {
     try {
-      const res = await fetch('http://127.0.0.1:8000/api/session/live');
-      const data = await res.json();
+      const response = await fetch(
+        `${API_URL}/api/session/live`
+      );
 
-      if (data.drivers) {
-        setLap(data.current_lap);
-        setTotalLaps(data.total_laps || 0); // Capture the new total_laps value
-        setDrivers(data.drivers);
-        setError(null);
-      }
+      const data = await response.json();
+
+      setSession(data.session);
+      setRace(data.race);
+      setDrivers(data.drivers || []);
+
+      setError(null);
     } catch (err) {
-      console.error("BFF streaming node error:", err);
-      setError("Failed to stream telemetry updates.");
+      console.error(err);
+      setError("Backend unavailable");
     } finally {
       setIsLoading(false);
     }
   }
 
-  // Infused Reset Functionality
   async function resetSession() {
     try {
-      setIsLoading(true); // Show a quick loading state while backend re-caches Lap 1
-      const res = await fetch('http://127.0.0.1:8000/api/session/reset');
-      const data = await res.json();
+      await fetch(
+        `${API_URL}/api/session/reset`
+      );
 
-      if (data.status === "success") {
-        console.log("Telemetry simulation rolled back successfully.");
-        // Instantly force-refresh the data matrix so the UI snaps back to Lap 1 immediately
-        await fetchLiveFeed();
-      }
+      await fetchLiveFeed();
     } catch (err) {
-      console.error("BFF streaming node reset error:", err);
-      setError("Failed to execute simulation reset.");
-      setIsLoading(false);
+      console.error(err);
     }
   }
 
   useEffect(() => {
-    // Initial fetch handshake
     fetchLiveFeed();
 
-    // Poll the Python BFF server every 300ms for fresh telemetry numbers
-    const interval = setInterval(fetchLiveFeed, 300);
+    const interval = setInterval(
+      fetchLiveFeed,
+      300
+    );
 
-    return () => {
-      clearInterval(interval);
-    };
-  }, []); // Keeps your clean 300ms polling lifecycle intact
+    return () => clearInterval(interval);
+  }, []);
 
-  // Exposed totalLaps and resetSession to the rest of your app
-  return { lap, totalLaps, drivers, isLoading, error, resetSession };
+  return {
+    session,
+    race,
+    drivers,
+    isLoading,
+    error,
+    resetSession,
+  };
 }
