@@ -48,6 +48,7 @@ ENV/
 
 # Python cache
 __pycache__/
+fastf1_cache
 *.py[cod]
 .pytest_cache/
 .mypy_cache/
