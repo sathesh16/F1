@@ -35,14 +35,14 @@ export default function LiveTrackMap({ drivers }) {
 
       <svg
         viewBox={viewBox}
-        className="w-full h-auto max-h-[260px] drop-shadow-[0_0_15px_rgba(0,210,106,0.05)]"
+        className="w-full h-auto max-h-[460px] drop-shadow-[0_0_15px_rgba(0,210,106,0.05)]"
       >
         {/* Core Asphalt Vector Underlay Line */}
         <path
           d={svgLineData}
           fill="none"
           stroke="#1F1F23"
-          strokeWidth="35"
+          strokeWidth="50"
           strokeLinecap="round"
           strokeLinejoin="round"
         />
@@ -51,7 +51,7 @@ export default function LiveTrackMap({ drivers }) {
           d={svgLineData}
           fill="none"
           stroke="#3F3F46"
-          strokeWidth="6"
+          strokeWidth="15"
           strokeLinecap="round"
           strokeLinejoin="round"
         />

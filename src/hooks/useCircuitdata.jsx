@@ -13,9 +13,9 @@ export function useCircuitData(locationName = "Spa") {
     async function fetchFastF1Circuit() {
       setIsLoading(true);
       try {
-        const res = await fetch(`http://127.0.0.1:8000/api/circuit?location=${locationName}`);
+        const res = await fetch("http://127.0.0.1:8000/api/session/track");
         const data = await res.json();
-
+        console.log(data)
         if (isMounted && data.points) {
           let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
 

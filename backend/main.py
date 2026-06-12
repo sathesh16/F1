@@ -16,6 +16,10 @@ from services.replay_engine import (
     ReplayEngine
 )
 
+from services.track_service import (
+    TrackService
+)
+
 from api.routes import (
     register_routes
 )
@@ -39,7 +43,7 @@ app.add_middleware(
 loader = SessionLoader()
 
 session = loader.load_session(
-    year=2024,
+    year=2025,
     event="Belgium",
     session_type="R"
 )
@@ -51,8 +55,17 @@ drivers = (
     .discover_drivers(session)
 )
 
+track_service = TrackService()
+
+track_layout = (
+    track_service
+    .build_track_layout(session)
+)
+
 telemetry_service = (
-    TelemetryService()
+    TelemetryService(
+        track_layout["bounds"]
+    )
 )
 
 (
@@ -64,6 +77,8 @@ telemetry_service = (
     drivers
 )
 
+
+
 replay_engine = ReplayEngine(
     session_info={
         "year": 2024,
@@ -73,7 +88,8 @@ replay_engine = ReplayEngine(
     driver_cache=drivers,
     lap_cache=lap_cache,
     position_cache=position_cache,
-    total_laps=total_laps
+    total_laps=total_laps,
+    track_layout=track_layout
 )
 
 app.include_router(

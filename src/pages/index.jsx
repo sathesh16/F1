@@ -4,22 +4,27 @@ import React, {
 } from "react";
 
 import { useSessionStream }
-from "../hooks/useSessionStream";
+  from "../hooks/useSessionStream";
 
+import useTrackData from "@/hooks/useTrackData";
+  
 import LiveTower
-from "../components/timing-tower/LiveTower";
+  from "../components/timing-tower/LiveTower";
 
 import WheelDisplay
-from "../components/telemetry/WheelDisplay";
+  from "../components/telemetry/WheelDisplay";
 
 import LiveTrackMap
-from "../components/telemetry/LiveTrackMap";
+  from "../components/telemetry/LiveTrackMap";
 
 import {
   getTeamColor,
 } from "../utils/teamColors";
+import PixiTrackMap from "@/components/trackmap/PixiTrackMap";
 
 export default function Dashboard() {
+
+  // console.log(PixiReact);
 
   const {
     session,
@@ -28,6 +33,11 @@ export default function Dashboard() {
     isLoading,
     resetSession,
   } = useSessionStream();
+
+  const {
+    track,
+    loading
+  } = useTrackData();
 
   const [
     selectedDriver,
@@ -61,9 +71,9 @@ export default function Dashboard() {
   const progress =
     race
       ? (
-          race.current_lap /
-          race.total_laps
-        ) * 100
+        race.current_lap /
+        race.total_laps
+      ) * 100
       : 0;
 
   return (
@@ -173,7 +183,8 @@ export default function Dashboard() {
 
           <div className="border border-carbon-600 p-4">
 
-            <LiveTrackMap
+            <PixiTrackMap
+              track={track}
               drivers={formattedDrivers}
             />
 

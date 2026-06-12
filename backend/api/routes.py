@@ -28,5 +28,15 @@ def register_routes(
             "status": "success",
             "current_lap": 1
         }
+    
+    @router.get(
+        "/api/session/track"
+    )
+    def get_track():
+
+        return (
+            replay_engine
+            .get_track()
+        )
 
     return router

@@ -1,10 +1,20 @@
+import pandas as pd
 from services.trackmap_service import TrackMapService
 
 
 class TelemetryService:
 
-    def __init__(self):
-        self.trackmap_service = TrackMapService()
+    def __init__(
+        self,
+        track_bounds
+    ):
+        self.trackmap_service = (
+            TrackMapService()
+        )
+
+        self.track_bounds = (
+            track_bounds
+        )
 
     def build_full_session_cache(
         self,
@@ -42,33 +52,46 @@ class TelemetryService:
                     lap = lap_row.iloc[0]
 
                     if "Position" in lap_row.columns:
-                        position_cache[lap_number][driver_number] = int(
-                            lap["Position"]
-                        )
+                        position = lap.get("Position")
 
-                    car_data = lap_row.get_car_data()
+                        if pd.notna(position):
+                            position_cache[lap_number][driver_number] = int(position)
+
+                    car_data = (
+                        lap
+                        .get_car_data()
+                        .add_distance()
+                    )
 
                     if car_data.empty:
                         continue
-
+                    
                     try:
-                        pos_data = lap_row.get_pos_data()
+                    
+                        pos_data = lap.get_pos_data()
 
                         if not pos_data.empty:
+                        
                             merged = car_data.merge_channels(
                                 pos_data
                             )
+
                         else:
+                        
                             merged = car_data
 
                     except Exception:
+                    
                         merged = car_data
 
                     frames = []
 
                     track_frames = (
                         self.trackmap_service
-                        .extract_frame_data(merged)
+                        .extract_frame_data(
+                            merged,
+                            self.track_bounds
+                        )
                     )
 
                     for idx, (_, row) in enumerate(

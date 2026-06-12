@@ -9,7 +9,8 @@ class ReplayEngine:
         driver_cache,
         lap_cache,
         position_cache,
-        total_laps
+        total_laps,
+        track_layout
     ):
 
         self.session_info = session_info
@@ -23,6 +24,8 @@ class ReplayEngine:
         self.state = ReplayState(
             total_laps=total_laps
         )
+        
+        self.track_layout = track_layout
 
     def reset(self):
 
@@ -44,10 +47,19 @@ class ReplayEngine:
             len(frames)
             for frames in lap_data.values()
         )
+    
+    def get_track(self):
+        return self.track_layout
 
     def advance(self):
 
         max_frames = self._get_max_frames()
+        
+        print(
+            f"Lap={self.state.current_lap} "
+            f"Frame={self.state.current_frame} "
+            f"MaxFrames={max_frames}"
+        )
 
         if max_frames == 0:
             return
@@ -65,7 +77,7 @@ class ReplayEngine:
                 > self.state.total_laps
             ):
 
-                self.reset()
+                self.state.race_finished = True
 
     def get_live_snapshot(self):
 
